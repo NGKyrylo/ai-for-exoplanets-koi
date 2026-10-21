@@ -1,0 +1,5 @@
+__pycache__/
+.venv/
+*.pyc
+model/last_batch_result.csv
+.DS_Store

@@ -1,0 +1,41 @@
+{
+  "source": "user Orange export v2",
+  "n_train": 5861,
+  "n_test": 1466,
+  "auc": 0.976183523924733,
+  "accuracy": 0.9283765347885402,
+  "f1_weighted": 0.9284910812815168,
+  "confusion_matrix_labels": [
+    "FALSE POSITIVE",
+    "CONFIRMED"
+  ],
+  "confusion_matrix": [
+    [
+      860,
+      57
+    ],
+    [
+      48,
+      501
+    ]
+  ],
+  "feature_importances": {
+    "koi_depth": 19.556284575648192,
+    "koi_period": 18.946932920639437,
+    "koi_impact": 17.716433897369797,
+    "koi_model_snr": 14.574110113638566,
+    "koi_duration": 11.54510755748892,
+    "koi_steff": 6.366738274223216,
+    "koi_srad": 4.887202437908849,
+    "koi_slogg": 4.195038261767026,
+    "koi_kepmag": 2.212151961316001
+  },
+  "params": {
+    "iterations": 100,
+    "learning_rate": 0.3,
+    "depth": 6,
+    "l2_leaf_reg": 3,
+    "random_seed": 42,
+    "backend": "catboost"
+  }
+}
