@@ -1,4 +1,7 @@
-# How to publish (Hugging Face Spaces)
+# How to publish
+
+> **Note (2026):** Hugging Face **Gradio Spaces often require PRO**.  
+> Practical free options: **Render** (public Git repo) or run locally / Gradio `share=True`.
 
 You only need the **`challenge/`** folder (~2 MB). Not the whole git monorepo.
 

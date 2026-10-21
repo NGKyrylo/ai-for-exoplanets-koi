@@ -7,6 +7,7 @@ Run: python app.py
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import gradio as gr
@@ -146,6 +147,18 @@ img {
 # Cap width so 16:9 / ultrawide monitors don't stretch charts into a ribbon.
 APP_HEAD = """
 <style>
+/* Sans stack with system fallbacks — never fall back to Times. */
+html, body, .gradio-container, .gradio-container button,
+.gradio-container input, .gradio-container textarea, .gradio-container select,
+.gradio-container label, .gradio-container .prose, .gradio-container .markdown,
+.gradio-container table, .gradio-container .tabitem {
+  font-family: "Montserrat", "Segoe UI", "Helvetica Neue", "Noto Sans",
+    ui-sans-serif, system-ui, sans-serif !important;
+}
+code, pre, .code, kbd, samp {
+  font-family: "IBM Plex Mono", "Cascadia Code", Consolas, ui-monospace,
+    monospace !important;
+}
 .gradio-container {
   max-width: 1100px !important;
   margin-left: auto !important;
@@ -518,8 +531,14 @@ def _batch_from_df(df: pd.DataFrame, sort_by: str, ascending: bool, keep_disposi
     if sort_by not in out.columns:
         sort_by = "p_confirmed"
     out = out.sort_values(sort_by, ascending=ascending)
-    path = ROOT / "model" / "last_batch_result.csv"
-    path.parent.mkdir(parents=True, exist_ok=True)
+    # Prefer /tmp in Docker (model/ stays image-baked); fall back to model/ locally.
+    export_dir = Path(os.environ.get("KOI_EXPORT_DIR", "/tmp/koi-exports"))
+    try:
+        export_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        export_dir = ROOT / "model"
+        export_dir.mkdir(parents=True, exist_ok=True)
+    path = export_dir / "last_batch_result.csv"
     out.to_csv(path, index=False)
     return out, str(path)
 
@@ -543,21 +562,38 @@ def _gradio_major() -> int:
     return int(gr.__version__.split(".")[0])
 
 
+def make_theme() -> gr.themes.Soft:
+    # Soft ships Montserrat as a LocalFont; keep system sans fallbacks
+    # (GoogleFont can fail and leave the browser on Times New Roman).
+    return gr.themes.Soft(
+        primary_hue="amber",
+        secondary_hue="slate",
+        neutral_hue="slate",
+        font=(
+            gr.themes.LocalFont("Montserrat", weights=(400, 700)),
+            "Segoe UI",
+            "Helvetica Neue",
+            "Noto Sans",
+            "ui-sans-serif",
+            "system-ui",
+            "sans-serif",
+        ),
+    )
+
+
+KOI_THEME = make_theme()
+
+
 def build_app() -> gr.Blocks:
     defaults = load_clean()[FEATURES].median(numeric_only=True)
     figs = research_figures()
     model_bits = model_panel()
     model_ready = MODEL_PATH.exists()
 
-    # Gradio <6: css on Blocks. Gradio 6+: css belongs on launch() (see __main__).
-    theme = gr.themes.Soft(
-        primary_hue="amber",
-        secondary_hue="slate",
-        neutral_hue="slate",
-        font=gr.themes.GoogleFont("Source Sans 3"),
-    )
-    blocks_kw: dict = {"title": "AI for Exoplanets — KOI", "theme": theme}
+    # Gradio <6: theme/css on Blocks. Gradio 6+: pass them to launch() in __main__.
+    blocks_kw: dict = {"title": "AI for Exoplanets — KOI"}
     if _gradio_major() < 6:
+        blocks_kw["theme"] = KOI_THEME
         blocks_kw["css"] = APP_CSS
 
     with gr.Blocks(**blocks_kw) as demo:
@@ -670,13 +706,15 @@ def build_app() -> gr.Blocks:
 demo = build_app()
 
 if __name__ == "__main__":
-    # Local default; Hugging Face Spaces also runs this module.
+    # Docker / reverse-proxy: set PORT (default 7865). Bind 0.0.0.0 for containers.
+    port = int(os.environ.get("PORT", os.environ.get("GRADIO_SERVER_PORT", "7865")))
     launch_kw: dict = {
         "server_name": "0.0.0.0",
-        "server_port": 7865,
+        "server_port": port,
         # head= bypasses Gradio 6's CSS selector rewriter (width cap + phone stack).
         "head": APP_HEAD,
     }
     if _gradio_major() >= 6:
         launch_kw["css"] = APP_CSS
+        launch_kw["theme"] = KOI_THEME
     demo.launch(**launch_kw)
