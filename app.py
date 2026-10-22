@@ -29,30 +29,47 @@ CAND_CSV = DATA / "koi_candidates.csv"
 WORKFLOW_IMG = ROOT / "assets" / "orange_workflow.png"
 
 PRED_NOTE = """
-Outputs per row: **prediction**, **p_confirmed**, **confidence** (= max class probability).  
-Sorting by `p_confirmed` ranks “most planet-like” first.
+Outputs per row:
 
-**Score reading tip:** hard label uses a 0.5 cut
-(`CONFIRMED` if `p_confirmed ≥ 0.5`, else `FALSE POSITIVE`).  
-If `p_confirmed` is roughly **0.30–0.60**, treat the row as uncertain / needs review.
-Clearer cases usually sit near 0–0.2 or 0.8–1.0.  
-(Why the mid-range is messy — see **Model → How to read the model**.)
+- **`p_confirmed`** — estimated probability that the object is a **planet** (`CONFIRMED`).
+  The false-positive probability is about `1 − p_confirmed`.
+- **`confidence`** — how sure the model is about the **chosen label**
+  (= max of the two class probabilities). High confidence can mean “sure planet”
+  *or* “sure false positive”.
+- **`prediction`** — hard label from a **0.5 cut** on `p_confirmed`
+  (`CONFIRMED` if `p_confirmed ≥ 0.5`, else `FALSE POSITIVE`).
+
+**Why sort by `p_confirmed`:** it is the main score for triage — highest first means
+“most likely a planet, check these first”; lowest means “unlikely a planet”.
+Sorting by `confidence` only ranks certainty, not planet-likeness.
+
+**Score reading tip:** if `p_confirmed` is roughly **0.30–0.60**, treat the row as
+uncertain / needs review. Clearer cases usually sit near 0–0.2 or 0.8–1.0 — but even
+there the model can be wrong, so high/low scores are for **priority**, not a skip of review.  
+(More on the mid-range and feature limits — see **Model → How to read the model**.)
 """
 
 MODEL_READING = """
 ### How to read the model
 
-- The classifier outputs class probabilities; the displayed label is only a **0.5 threshold**
-  on `p_confirmed`.
+- The model estimates **two class probabilities**. In this demo we surface
+  **`p_confirmed` = P(planet)** as the primary score; the FP probability is the complement.
+- The displayed **`prediction`** is only a **0.5 threshold** on `p_confirmed`, not a
+  separate “oracle” label.
+- **`confidence`** (= max class probability) answers “how sure is this call?”, not
+  “how planet-like is it?”. For review queues we prioritize by **`p_confirmed`**
+  (most → least planet-like).
 - Overall test metrics can look strong while individual rows in the **~0.30–0.60** band stay
   ambiguous: CONFIRMED and FALSE POSITIVE overlap in the moderate region of period/depth/SNR
   (as the Research charts show).
 - **`confidence` near 0.5** means the model is undecided — useful for triage, not a failure by itself.
-- That grey zone could likely be narrowed with a deeper feature study
-  (e.g. measurement uncertainties `*_err*`, extra transit/stellar diagnostics).
-  In this time-limited student project I kept a compact core feature set on purpose.
+- Scores near **0–0.2** or **0.8–1.0** are usually clearer, but they are still model estimates:
+  overconfident mistakes happen, so every row can deserve a human check when the stakes matter.
+- That grey zone (and some high-confidence errors) could likely be narrowed with a deeper
+  feature study — e.g. measurement uncertainties `*_err*` and extra transit/stellar diagnostics
+  (see also **Research → Conclusions**, point 6, on why the model uses 5 researched transit
+  measures + 4 stellar fields without a full second EDA pass).
 """
-
 DISCLAIMER = """
 > **Attribution**  
 > Research, feature design, Orange modeling, and interpretation are the work of student  
@@ -89,8 +106,13 @@ CONCLUSIONS = """
 5. Unsupervised clustering on the same core features also pulled out extreme groups that were
    almost entirely FALSE POSITIVE, while the large typical group stayed mixed. That supports
    the supervised model, but does not replace it.
+6. **Five researched transit measures** (period, duration, depth, impact, SNR) were the focus
+   of the charts above, but they are **not enough** on their own for a solid planet vs FP
+   classifier. The table already contains other usable measurements, so **four stellar host
+   fields** (Teff, log g, R★, Kepmag) were added to the model **without a full second research
+   pass** on them — a practical compromise under a one-person time limit. Uncertainty columns
+   (`*_err*`) and further diagnostics were left for later study rather than included “blindly”.
 """
-
 # Gradio 6 rewrites custom CSS by prefixing selectors with
 # `.gradio-container… .contain …`. Starting rules with `.gradio-container`
 # creates a broken nested selector that never matches. Use short selectors.
