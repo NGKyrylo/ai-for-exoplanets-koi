@@ -214,7 +214,11 @@ MOBILE_HEAD = APP_HEAD
 
 
 def _style_fig(fig, height: int = 400):
-    """Readable Plotly layout for capped desktop width + phone stack."""
+    """Readable Plotly layout for capped desktop width + phone stack.
+
+    Zoom/pan locked: accidental pinch/drag on phones otherwise leaves charts
+    stuck until a full page reload.
+    """
     fig.update_layout(
         template="plotly_dark",
         height=height,
@@ -224,6 +228,7 @@ def _style_fig(fig, height: int = 400):
         title=dict(font=dict(size=14, color="#f2f2f4")),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(255,255,255,0.04)",
+        dragmode=False,
         legend=dict(
             orientation="h",
             yanchor="bottom",
@@ -236,6 +241,7 @@ def _style_fig(fig, height: int = 400):
     )
     fig.update_xaxes(
         automargin=True,
+        fixedrange=True,
         title_font=dict(size=12),
         tickfont=dict(size=11),
         gridcolor="rgba(255,255,255,0.08)",
@@ -243,6 +249,7 @@ def _style_fig(fig, height: int = 400):
     )
     fig.update_yaxes(
         automargin=True,
+        fixedrange=True,
         title_font=dict(size=12),
         tickfont=dict(size=11),
         gridcolor="rgba(255,255,255,0.08)",
